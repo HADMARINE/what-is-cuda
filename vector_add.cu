@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cuda_profiler_api.h>
 
 #define N 100000000
 #define MAX_ERR 1e-6
@@ -13,6 +14,8 @@ __global__ void vector_add(float *out, float *a, float *b, long n)
     long index = threadIdx.x;
     long stride = blockDim.x;
 
+    printf("ThreadID : %d, BlockDim : %d\n", threadIdx.x, blockDim.x);
+
     for (long i = index; i < n; i += stride)
     {
         out[i] = a[i] + b[i];
@@ -21,6 +24,8 @@ __global__ void vector_add(float *out, float *a, float *b, long n)
 
 int main()
 {
+    cudaProfilerStart();
+
     float *a, *b, *out;
     float *d_a, *d_b, *d_out;
 
@@ -68,4 +73,9 @@ int main()
     free(a);
     free(b);
     free(out);
+
+    cudaProfilerStop();
+    cudaDeviceReset();
+
+    return 0;
 }
