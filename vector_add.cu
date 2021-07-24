@@ -6,20 +6,18 @@
 #include <cuda_runtime.h>
 #include <cuda_profiler_api.h>
 
-#define N 100000000
+#define N 1000000
+#define THREAD_PER_BLOCK 1000
 #define MAX_ERR 1e-6
 
-__global__ void vector_add(float *out, float *a, float *b, long n)
+__global__ void vector_add(float *out, float *a, float *b)
 {
-    long index = threadIdx.x;
-    long stride = blockDim.x;
+    long index = threadIdx.x + blockIdx.x * blockDim.x;
 
-    printf("ThreadID : %d, BlockDim : %d\n", threadIdx.x, blockDim.x);
+    printf("ThreadID : %d, BlockDim : %d, BlockIdx : %d\n", threadIdx.x, blockDim.x, blockIdx.x);
 
-    for (long i = index; i < n; i += stride)
-    {
-        out[i] = a[i] + b[i];
-    }
+    if (index < N)
+        out[index] = a[index] + b[index];
 }
 
 int main()
@@ -51,7 +49,7 @@ int main()
     cudaMemcpy(d_b, b, sizeof(float) * N, cudaMemcpyHostToDevice);
 
     // Executing kernel
-    vector_add<<<1, 256>>>(d_out, d_a, d_b, N);
+    vector_add<<<N / THREAD_PER_BLOCK, THREAD_PER_BLOCK>>>(d_out, d_a, d_b);
 
     // Transfer data back to host memory
     cudaMemcpy(out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
@@ -59,7 +57,8 @@ int main()
     // Verification
     for (long i = 0; i < N; i++)
     {
-        assert(fabs(out[i] - a[i] - b[i]) < MAX_ERR);
+        // assert(fabs(out[i] - a[i] - b[i]) < MAX_ERR);
+        assert(out[i] == 3.0);
     }
     printf("out[0] = %f\n", out[0]);
     printf("PASSED\n");
